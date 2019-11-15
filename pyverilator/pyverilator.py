@@ -7,7 +7,7 @@ import re
 import warnings
 from keyword import iskeyword
 import pyverilator.verilatorcpp as template_cpp
-import tclwrapper
+# import tclwrapper
 
 def verilator_name_to_standard_modular_name(verilator_name):
     """Converts a name exposed in Verilator to its standard name.
@@ -727,69 +727,69 @@ class PyVerilator:
                     window_start_time = float(self.gtkwave_tcl.eval('gtkwave::getWindowStartTime'))
                     self.gtkwave_tcl.eval('gtkwave::setWindowStartTime %d' % (window_start_time + time_shift_amt))
 
-    def start_gtkwave(self):
-        if self.vcd_filename is None:
-            self.start_vcd_trace(PyVerilator.default_vcd_filename)
-        # in preparation for using tclwrapper with gtkwave, add a warning filter
-        # to ignore expected messages written to stderr for certain commands
-        warnings.filterwarnings('ignore', r".*generated stderr message '\[[0-9]*\] start time.\\n\[[0-9]*\] end time.\\n'")
-        self.gtkwave_active = True
-        self.gtkwave_tcl = tclwrapper.TCLWrapper('gtkwave', '-W')
-        self.gtkwave_tcl.start()
-        self.gtkwave_tcl.eval('gtkwave::loadFile %s' % self.vcd_filename)
-        # adjust the screen to show more of the trace
-        zf = float(self.gtkwave_tcl.eval('gtkwave::getZoomFactor'))
-        # this seems to work well
-        new_zf = zf - 5
-        self.gtkwave_tcl.eval('gtkwave::setZoomFactor %f' % (new_zf))
+    # def start_gtkwave(self):
+    #     if self.vcd_filename is None:
+    #         self.start_vcd_trace(PyVerilator.default_vcd_filename)
+    #     # in preparation for using tclwrapper with gtkwave, add a warning filter
+    #     # to ignore expected messages written to stderr for certain commands
+    #     warnings.filterwarnings('ignore', r".*generated stderr message '\[[0-9]*\] start time.\\n\[[0-9]*\] end time.\\n'")
+    #     self.gtkwave_active = True
+    #     self.gtkwave_tcl = tclwrapper.TCLWrapper('gtkwave', '-W')
+    #     self.gtkwave_tcl.start()
+    #     self.gtkwave_tcl.eval('gtkwave::loadFile %s' % self.vcd_filename)
+    #     # adjust the screen to show more of the trace
+    #     zf = float(self.gtkwave_tcl.eval('gtkwave::getZoomFactor'))
+    #     # this seems to work well
+    #     new_zf = zf - 5
+    #     self.gtkwave_tcl.eval('gtkwave::setZoomFactor %f' % (new_zf))
 
-    def send_to_gtkwave(self, objs):
-        """Generic function for sending things to GTKWave.
+    # def send_to_gtkwave(self, objs):
+    #     """Generic function for sending things to GTKWave.
 
-        This works on Signals, Collections, Interfaces, and Rules"""
-        if isinstance(objs, list):
-            for obj in objs:
-                self.send_to_gtkwave(obj)
-        elif isinstance(objs, Collection):
-            for key in objs:
-                self.send_to_gtkwave(objs[key])
-        elif isinstance(objs, Signal):
-            self.send_signal_to_gtkwave(objs)
-        else:
-            objs.send_to_gtkwave()
+    #     This works on Signals, Collections, Interfaces, and Rules"""
+    #     if isinstance(objs, list):
+    #         for obj in objs:
+    #             self.send_to_gtkwave(obj)
+    #     elif isinstance(objs, Collection):
+    #         for key in objs:
+    #             self.send_to_gtkwave(objs[key])
+    #     elif isinstance(objs, Signal):
+    #         self.send_signal_to_gtkwave(objs)
+    #     else:
+    #         objs.send_to_gtkwave()
 
-    def send_signal_to_gtkwave(self, sig):
-        if not self.gtkwave_active:
-            raise ValueError('send_signals_to_gtkwave() requires GTKWave to be started using start_gtkwave()')
+    # def send_signal_to_gtkwave(self, sig):
+    #     if not self.gtkwave_active:
+    #         raise ValueError('send_signals_to_gtkwave() requires GTKWave to be started using start_gtkwave()')
 
-        if not isinstance(sig, Signal):
-            raise TypeError('send_signal_to_gtkwave() only works on Signal objects. Use send_to_gtkwave() for other items.')
+    #     if not isinstance(sig, Signal):
+    #         raise TypeError('send_signal_to_gtkwave() only works on Signal objects. Use send_to_gtkwave() for other items.')
 
-        gtkwave_name = 'TOP.{}.'.format(self.module_name) + '.'.join(sig.modular_name)
-        if sig.width > 1:
-            gtkwave_name += '[%d:0]' % (sig.width-1)
+    #     gtkwave_name = 'TOP.{}.'.format(self.module_name) + '.'.join(sig.modular_name)
+    #     if sig.width > 1:
+    #         gtkwave_name += '[%d:0]' % (sig.width-1)
 
-        # find the signals
-        num_found_signals = int(self.gtkwave_tcl.eval('''
-        set nfacs [gtkwave::getNumFacs]
-        set found_signals [list]
-        set target_sig {%s}
-        for {set i 0} {$i < $nfacs} {incr i} {
-            set facname [gtkwave::getFacName $i]
-            if {[string first [string tolower $target_sig] [string tolower $facname]] != -1} {
-                lappend found_signals "$facname"
-            }
-        }
-        gtkwave::addSignalsFromList $found_signals
-        ''' % gtkwave_name))
+    #     # find the signals
+    #     num_found_signals = int(self.gtkwave_tcl.eval('''
+    #     set nfacs [gtkwave::getNumFacs]
+    #     set found_signals [list]
+    #     set target_sig {%s}
+    #     for {set i 0} {$i < $nfacs} {incr i} {
+    #         set facname [gtkwave::getFacName $i]
+    #         if {[string first [string tolower $target_sig] [string tolower $facname]] != -1} {
+    #             lappend found_signals "$facname"
+    #         }
+    #     }
+    #     gtkwave::addSignalsFromList $found_signals
+    #     ''' % gtkwave_name))
 
-        if num_found_signals < 1:
-            raise ValueError('send_signal_to_gtkwave was not able to send ' + gtkwave_name)
+    #     if num_found_signals < 1:
+    #         raise ValueError('send_signal_to_gtkwave was not able to send ' + gtkwave_name)
 
-    def stop_gtkwave(self):
-        if not self.gtkwave_active:
-            raise ValueError('stop_gtkwave() requires GTKWave to be started using start_gtkwave()')
-        self.gtkwave_tcl.stop()
-        self.gtkwave_active = False
-        if self.vcd_filename == PyVerilator.default_vcd_filename:
-            self.stop_vcd_trace()
+    # def stop_gtkwave(self):
+    #     if not self.gtkwave_active:
+    #         raise ValueError('stop_gtkwave() requires GTKWave to be started using start_gtkwave()')
+    #     self.gtkwave_tcl.stop()
+    #     self.gtkwave_active = False
+    #     if self.vcd_filename == PyVerilator.default_vcd_filename:
+    #         self.stop_vcd_trace()
