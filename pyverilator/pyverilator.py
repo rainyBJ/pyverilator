@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import json
 import re
+import tempfile
 import warnings
 from keyword import iskeyword
 import pyverilator.verilatorcpp as template_cpp
@@ -361,11 +362,12 @@ class PyVerilator:
     default_vcd_filename = 'gtkwave.vcd'
 
     @classmethod
-    def build(cls, top_verilog_file, verilog_path = [], build_dir = 'obj_dir', json_data = None, gen_only = False):
+    def build(cls, top_verilog_file, verilog_path = [], build_dir = None, json_data = None, gen_only = False):
         """ Build an object file from verilog and load it into python.
 
         Creates a folder build_dir in which it puts all the files necessary to create
         a model of top_verilog_file using verilator and the C compiler. All the files are created in build_dir.
+        If build_dir is None, a unique temporary directory will be created.
 
         If the project is made of more than one verilog file, all the files used by the top_verilog_file will be searched
         for in the verilog_path list.
@@ -382,12 +384,18 @@ class PyVerilator:
         # get the module name from the verilog file name
         top_verilog_file_base = os.path.basename(top_verilog_file)
         verilog_module_name, extension = os.path.splitext(top_verilog_file_base)
+        builddir_is_tmp = False
+        if build_dir is None:
+            build_dir = tempfile.mkdtemp(prefix=verilog_module_name+"-")
+            builddir_is_tmp = True
         if extension != '.v':
             raise ValueError('PyVerilator() expects top_verilog_file to be a verilog file ending in .v')
 
-        # prepare the path for the C++ wrapper file
-        if not os.path.exists(build_dir):
-            os.makedirs(build_dir)
+        # prepare the path for the C++ wrapper file, ensure no old files remain
+        # to avoid errors due to recompiling same module with different config
+        if os.path.exists(build_dir):
+            shutil.rmtree(build_dir)
+        os.makedirs(build_dir)
         verilator_cpp_wrapper_path = os.path.join(build_dir, 'pyverilator_wrapper.cpp')
 
         # call verilator executable to generate the verilator C++ files
@@ -466,9 +474,15 @@ class PyVerilator:
                      'LDFLAGS=-fPIC -shared']
         subprocess.call(make_args)
         so_file = os.path.join(build_dir, 'V' + verilog_module_name)
-        return cls(so_file)
+        if builddir_is_tmp:
+            # mark the build dir for removal upon destruction
+            return cls(so_file, builddir_to_remove = build_dir)
+        else:
+            return cls(so_file)
 
-    def __init__(self, so_file, auto_eval=True):
+
+    def __init__(self, so_file, auto_eval=True, builddir_to_remove=None):
+        self.builddir_to_remove = builddir_to_remove
         # initialize lib and model first so if __init__ fails, __del__ will
         # not fail.
         self.lib = None
@@ -511,6 +525,8 @@ class PyVerilator:
             fn(self.model)
         if self.lib is not None:
             del self.lib
+        if self.builddir_to_remove is not None:
+            shutil.rmtree(self.builddir_to_remove)
 
     def _read_embedded_data(self):
         self.module_name = ctypes.c_char_p.in_dll(self.lib, '_pyverilator_module_name').value.decode('ascii')
