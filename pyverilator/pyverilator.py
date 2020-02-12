@@ -381,6 +381,12 @@ class PyVerilator:
 
         gen_only stops the process before compiling the cpp into object.
         """
+        # verilator can't find memory files unless they are in the cwd
+        # so switch to where the top verilog is
+        # (assuming the mem .dat files are also there...)
+        top_verilog_dir = os.path.dirname(os.path.realpath(top_verilog_file))
+        old_cwd = os.getcwd()
+        os.chdir(top_verilog_dir)
         # get the module name from the verilog file name
         top_verilog_file_base = os.path.basename(top_verilog_file)
         verilog_module_name, extension = os.path.splitext(top_verilog_file_base)
@@ -467,6 +473,7 @@ class PyVerilator:
 
         # if only generating verilator C++ files, stop here
         if gen_only:
+            os.chdir(old_cwd)
             return None
 
         # call make to build the pyverilator shared object
@@ -476,9 +483,12 @@ class PyVerilator:
         so_file = os.path.join(build_dir, 'V' + verilog_module_name)
         if builddir_is_tmp:
             # mark the build dir for removal upon destruction
-            return cls(so_file, builddir_to_remove = build_dir)
+            ret = cls(so_file, builddir_to_remove = build_dir)
         else:
-            return cls(so_file)
+            ret = cls(so_file)
+        os.chdir(old_cwd)
+        return ret
+
 
 
     def __init__(self, so_file, auto_eval=True, builddir_to_remove=None):
