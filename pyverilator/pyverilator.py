@@ -695,7 +695,6 @@ class PyVerilator:
             self.add_to_vcd_trace()
 
     def start_vcd_trace(self, filename, auto_tracing = True):
-        import pdb; pdb.set_trace()
         if self.vcd_trace is not None:
             raise ValueError('start_vcd_trace() called while VCD tracing is already active')
         start_vcd_trace = self.lib.start_vcd_trace
