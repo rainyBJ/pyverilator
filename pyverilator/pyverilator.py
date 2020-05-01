@@ -421,7 +421,7 @@ class PyVerilator:
                          + ['--CFLAGS',
                            '-fPIC --std=c++11',
                             '--trace',
-                            '--trace-depth=%d' % trace_depth,
+                            '--trace-depth', '%d' % trace_depth,
                             '--cc',
                             top_verilog_file,
                             '--exe',
