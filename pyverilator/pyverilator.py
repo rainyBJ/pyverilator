@@ -436,7 +436,6 @@ class PyVerilator:
         which_verilator = shutil.which('verilator')
         if which_verilator is None:
             raise Exception("'verilator' executable not found")
-        import pdb; pdb.set_trace()
         # tracing (--trace) is required in order to see internal signals
         verilator_args = ['perl', which_verilator, '-Wno-fatal', '-Mdir', build_dir] \
                          + verilog_path_args \
