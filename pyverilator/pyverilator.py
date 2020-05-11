@@ -362,7 +362,7 @@ class PyVerilator:
     default_vcd_filename = 'gtkwave.vcd'
 
     @classmethod
-    def build(cls, top_verilog_file, verilog_path = [], build_dir = None, json_data = None, gen_only = False, trace_depth=2):
+    def build(cls, top_verilog_file, verilog_path = [], build_dir = None, json_data = None, gen_only = False, trace_depth=2, top_module_name=None):
         """ Build an object file from verilog and load it into python.
 
         Creates a folder build_dir in which it puts all the files necessary to create
@@ -384,17 +384,28 @@ class PyVerilator:
         # verilator can't find memory files unless they are in the cwd
         # so switch to where the top verilog is
         # (assuming the mem .dat files are also there...)
-        top_verilog_dir = os.path.dirname(os.path.realpath(top_verilog_file))
+        if not isinstance(top_verilog_file, list):
+            top_verilog_dir = os.path.dirname(os.path.realpath(top_verilog_file))
+        else:
+            top_verilog_dir = verilog_path[0]
+
+
         old_cwd = os.getcwd()
         os.chdir(top_verilog_dir)
+
         # get the module name from the verilog file name
-        top_verilog_file_base = os.path.basename(top_verilog_file)
-        verilog_module_name, extension = os.path.splitext(top_verilog_file_base)
+        if not isinstance(top_verilog_file, list):
+            top_verilog_file_base = os.path.basename(top_verilog_file)
+            verilog_module_name, extension = os.path.splitext(top_verilog_file_base)
+        else:
+            verilog_module_name = top_module_name
+            extension = None
+
         builddir_is_tmp = False
         if build_dir is None:
             build_dir = tempfile.mkdtemp(prefix=verilog_module_name+"-")
             builddir_is_tmp = True
-        if extension != '.v':
+        if top_module_name is None and extension != '.v':
             raise ValueError('PyVerilator() expects top_verilog_file to be a verilog file ending in .v')
 
         # prepare the path for the C++ wrapper file, ensure no old files remain
@@ -409,6 +420,16 @@ class PyVerilator:
         for verilog_dir in verilog_path:
             verilog_path_args += ['-y', verilog_dir]
 
+        if top_module_name is not None:
+            top_module_arg = ["--top-module",top_module_name]
+        else:
+            top_module_arg = []
+
+        if not isinstance(top_verilog_file, list):
+            verilog_file_arg = [top_verilog_file]
+        else:
+            verilog_file_arg = top_verilog_file
+
         # Verilator is a perl program that is run as an executable
         # Old versions of Verilator are interpreted as a perl script by the shell,
         # while more recent versions are interpreted as a bash script that calls perl on itself
@@ -422,9 +443,10 @@ class PyVerilator:
                            '-fPIC --std=c++11',
                             '--trace',
                             '--trace-depth', '%d' % trace_depth,
-                            '--cc',
-                            top_verilog_file,
-                            '--exe',
+                            '--cc'] \
+                         + verilog_file_arg \
+                         + top_module_arg \
+                         + ['--exe',
                             verilator_cpp_wrapper_path]
         subprocess.call(verilator_args)
 
