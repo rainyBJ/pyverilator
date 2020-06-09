@@ -362,7 +362,7 @@ class PyVerilator:
     default_vcd_filename = 'gtkwave.vcd'
 
     @classmethod
-    def build(cls, top_verilog_file, verilog_path = [], build_dir = None, json_data = None, gen_only = False, trace_depth=2, top_module_name=None):
+    def build(cls, top_verilog_file, verilog_path = [], build_dir = None, json_data = None, gen_only = False, trace_depth=2, top_module_name=None, auto_eval=True):
         """ Build an object file from verilog and load it into python.
 
         Creates a folder build_dir in which it puts all the files necessary to create
@@ -506,9 +506,9 @@ class PyVerilator:
         so_file = os.path.join(build_dir, 'V' + verilog_module_name)
         if builddir_is_tmp:
             # mark the build dir for removal upon destruction
-            ret = cls(so_file, builddir_to_remove = build_dir)
+            ret = cls(so_file, builddir_to_remove = build_dir, auto_eval = auto_eval)
         else:
-            ret = cls(so_file)
+            ret = cls(so_file, auto_eval = auto_eval)
         os.chdir(old_cwd)
         return ret
 
