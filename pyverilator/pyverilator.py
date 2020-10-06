@@ -362,7 +362,7 @@ class PyVerilator:
     default_vcd_filename = 'gtkwave.vcd'
 
     @classmethod
-    def build(cls, top_verilog_file, verilog_path = [], build_dir = None, json_data = None, gen_only = False, trace_depth=2, top_module_name=None, auto_eval=True):
+    def build(cls, top_verilog_file, verilog_path = [], build_dir = None, json_data = None, gen_only = False, trace_depth=2, top_module_name=None, auto_eval=True, read_internal_signals=False):
         """ Build an object file from verilog and load it into python.
 
         Creates a folder build_dir in which it puts all the files necessary to create
@@ -484,7 +484,7 @@ class PyVerilator:
                 if result:
                     outputs.append(result)
                 result = search_for_signal_decl('SIG', line)
-                if result:
+                if result and read_internal_signals:
                     internal_signals.append(result)
 
         # generate the C++ wrapper file
