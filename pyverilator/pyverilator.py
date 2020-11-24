@@ -11,6 +11,17 @@ from keyword import iskeyword
 import pyverilator.verilatorcpp as template_cpp
 # import tclwrapper
 
+
+def launch_process_helper(args):
+    """Helper function to launch a process in a way that facilitates logging
+    stdout/stderr with Python loggers."""
+    with subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
+        (verilator_cmd_out, verilator_cmd_err) = proc.communicate()
+    if verilator_cmd_out is not None:
+        sys.stdout.write(verilator_cmd_out.decode("utf-8"))
+    if verilator_cmd_err is not None:
+        sys.stderr.write(verilator_cmd_err.decode("utf-8"))
+
 def verilator_name_to_standard_modular_name(verilator_name):
     """Converts a name exposed in Verilator to its standard name.
 
@@ -449,12 +460,7 @@ class PyVerilator:
                          + top_module_arg \
                          + ['--exe',
                             verilator_cpp_wrapper_path]
-        proc = subprocess.Popen(verilator_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (verilator_cmd_out, verilator_cmd_err) = proc.communicate()
-        if verilator_cmd_out is not None:
-            sys.stdout.write(verilator_cmd_out)
-        if verilator_cmd_err is not None:
-            sys.stderr.write(verilator_cmd_err)
+        launch_process_helper(verilator_args)
 
         # get inputs, outputs, and internal signals by parsing the generated verilator output
         inputs = []
@@ -507,12 +513,7 @@ class PyVerilator:
         # call make to build the pyverilator shared object
         make_args = ['make', '-C', build_dir, '-f', 'V%s.mk' % verilog_module_name, 'CFLAGS=-fPIC -shared',
                      'LDFLAGS=-fPIC -shared']
-        proc = subprocess.Popen(make_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (verilator_cmd_out, verilator_cmd_err) = proc.communicate()
-        if verilator_cmd_out is not None:
-            sys.stdout.write(verilator_cmd_out)
-        if verilator_cmd_err is not None:
-            sys.stderr.write(verilator_cmd_err)
+        launch_process_helper(make_args)
         so_file = os.path.join(build_dir, 'V' + verilog_module_name)
         if builddir_is_tmp:
             # mark the build dir for removal upon destruction
