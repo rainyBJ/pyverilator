@@ -461,7 +461,7 @@ class PyVerilator:
                          + top_module_arg \
                          + ['--exe',
                             verilator_cpp_wrapper_path] \
-                         + extra_args
+                         + extra_args \
 			 + ["--inline-mult", "0"]
         launch_process_helper(verilator_args)
 
