@@ -462,6 +462,7 @@ class PyVerilator:
                          + ['--exe',
                             verilator_cpp_wrapper_path] \
                          + extra_args
+			 + ["--inline-mult", "0"]
         launch_process_helper(verilator_args)
 
         # get inputs, outputs, and internal signals by parsing the generated verilator output
